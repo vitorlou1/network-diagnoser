@@ -1,109 +1,150 @@
 # -*- coding: utf-8 -*-
 """
-Sistema Especialista para Diagnóstico de Problemas em Redes
+Sistema Especialista para Diagnóstico de Problemas em Redes (GUI)
 
-Este script implementa um sistema especialista baseado em regras para
-ajudar usuários a diagnosticar problemas comuns de conectividade de rede,
-guiando-os através de uma sequência de perguntas.
+Este script implementa uma Interface Gráfica de Usuário (GUI) com Tkinter
+para o sistema especialista de diagnóstico de rede.
 """
 
-def ask_question(question):
-    """Faz uma pergunta ao usuário e retorna a resposta normalizada (sim/nao)."""
-    while True:
-        try:
-            answer = input(f"\n{question} (sim/nao): ").strip().lower()
-            if answer in ["sim", "s"]:
-                return "sim"
-            elif answer in ["nao", "n"]:
-                return "nao"
+import tkinter as tk
+from tkinter import scrolledtext
+
+class NetworkDiagnosisApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Assistente de Diagnóstico de Rede")
+        self.root.geometry("500x400") # Ajuste de altura para melhor visualização
+        self.root.resizable(False, False) # Impede redimensionamento
+
+        # Variável para armazenar o estado atual do diagnóstico (índice da pergunta/passo)
+        self.current_step_index = -1 # -1 indica estado inicial
+        # Dicionário para armazenar as perguntas e a lógica de fluxo
+        # A chave é o índice do passo, o valor é uma tupla: 
+        # (texto_da_pergunta, indice_se_sim, indice_se_nao, eh_diagnostico_final)
+        # Índices negativos indicam diagnósticos finais (chave no self.diagnoses)
+        self.steps = {}
+        self.diagnoses = {}
+
+        # --- Widgets --- 
+        self.question_label = tk.Label(root, text="Bem-vindo! Clique em 'Iniciar'.", wraplength=480, justify="center", font=("Arial", 12), height=4)
+        self.question_label.pack(pady=(20, 10), padx=10)
+
+        self.button_frame = tk.Frame(root)
+        self.button_frame.pack(pady=10)
+
+        self.yes_button = tk.Button(self.button_frame, text="Sim", width=10, command=self.handle_yes, state=tk.DISABLED)
+        self.yes_button.pack(side=tk.LEFT, padx=10)
+
+        self.no_button = tk.Button(self.button_frame, text="Não", width=10, command=self.handle_no, state=tk.DISABLED)
+        self.no_button.pack(side=tk.LEFT, padx=10)
+
+        self.diagnosis_text = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=8, width=60, state=tk.DISABLED, font=("Arial", 10))
+        self.diagnosis_text.pack(pady=10, padx=10)
+
+        self.restart_button = tk.Button(root, text="Iniciar Diagnóstico", width=20, command=self.start_diagnosis)
+        self.restart_button.pack(pady=(5, 15))
+
+        # --- Preencher Lógica (Será feito na Integração - Passo 004) ---
+        self.populate_steps() # Método placeholder por enquanto
+
+    def populate_steps(self):
+        """Preenche a estrutura de passos e diagnósticos (Placeholder)."""
+        # Esta função será preenchida no passo 004 com a lógica real
+        self.steps = {
+            0: ("As luzes do modem/roteador parecem normais?", 1, -1, False), # -1 -> Diagnóstico 1
+            1: ("A conexão física (cabo/Wi-Fi) está correta?", 2, -2, False), # -2 -> Diagnóstico 2
+            2: ("Consegue acessar a página do roteador (ex: 192.168.0.1)?", 3, -3, False), # -3 -> Diagnóstico 3
+            3: ("Consegue acessar um IP externo (ex: 1.1.1.1)?", 4, -4, False), # -4 -> Diagnóstico 4
+            4: ("Consegue acessar um site pelo nome (ex: google.com)?", -5, -6, False) # -5 -> Diagnóstico 5, -6 -> Diagnóstico 6
+        }
+        self.diagnoses = {
+            -1: ("Problema físico/energia no modem/roteador.", "Verifique as conexões de energia e reinicie os aparelhos. Se persistir, contate o provedor ou verifique o equipamento."),
+            -2: ("Problema na conexão física local (Cabo ou Wi-Fi).", "Verifique cabos, conexão Wi-Fi, senha e sinal. Reinicie o dispositivo e o roteador."),
+            -3: ("Problema de IP ou comunicação com o roteador.", "Reinicie o dispositivo e o roteador. Verifique se o DHCP está ativo (obter IP automaticamente)."),
+            -4: ("Problema de conectividade geral com a internet.", "Reinicie modem e roteador. Verifique o status do serviço com seu provedor."),
+            -5: ("Conexão parece normal ou problema resolvido.", "Aparentemente tudo está funcionando. Monitore a conexão."),
+            -6: ("Problema de DNS (Resolução de Nomes).", "Reinicie o roteador. Considere configurar DNS manualmente (ex: 1.1.1.1 ou 8.8.8.8) no dispositivo ou roteador.")
+        }
+        print("Estrutura de passos e diagnósticos carregada (placeholder).") # Log para desenvolvimento
+
+    def update_ui(self, question=None, diagnosis_tuple=None, show_buttons=True, show_restart=False):
+        """Atualiza a interface com a nova pergunta ou diagnóstico."""
+        if question:
+            self.question_label.config(text=question)
+        else:
+             self.question_label.config(text="") # Limpa se não houver pergunta
+
+        self.diagnosis_text.config(state=tk.NORMAL)
+        self.diagnosis_text.delete('1.0', tk.END)
+        if diagnosis_tuple:
+            reason, suggestion = diagnosis_tuple
+            self.question_label.config(text="Diagnóstico Final:") # Atualiza label principal
+            full_diagnosis = f"Causa Provável: {reason}\n\nSugestão: {suggestion}\n\nSe o problema persistir, contate o suporte."
+            self.diagnosis_text.insert(tk.END, full_diagnosis)
+        self.diagnosis_text.config(state=tk.DISABLED)
+
+        if show_buttons:
+            self.yes_button.config(state=tk.NORMAL)
+            self.no_button.config(state=tk.NORMAL)
+        else:
+            self.yes_button.config(state=tk.DISABLED)
+            self.no_button.config(state=tk.DISABLED)
+
+        if show_restart:
+            self.restart_button.config(text="Reiniciar Diagnóstico", state=tk.NORMAL)
+        else:
+            # Mantém o botão iniciar/reiniciar, mas pode desabilitá-lo durante o processo
+             self.restart_button.config(state=tk.DISABLED)
+
+    def show_step(self, step_index):
+        """Exibe a pergunta ou o diagnóstico correspondente ao índice."""
+        self.current_step_index = step_index
+
+        if step_index >= 0: # É uma pergunta
+            if step_index in self.steps:
+                question_text, _, _, _ = self.steps[step_index]
+                self.update_ui(question=question_text, show_buttons=True, show_restart=False)
             else:
-                print("Por favor, responda apenas com 'sim' ou 'nao'.")
-        except EOFError:
-            print("\nEntrada inesperada. Saindo.")
-            return "nao" # Assume nao em caso de erro de entrada
-        except KeyboardInterrupt:
-            print("\nDiagnóstico interrompido pelo usuário. Saindo.")
-            exit()
+                # Fallback para erro inesperado no fluxo
+                self.show_final_diagnosis(-99) # Índice de erro
+        else: # É um diagnóstico final
+            self.show_final_diagnosis(step_index)
 
-def provide_diagnosis(reason, suggestion):
-    """Apresenta o diagnóstico final e a sugestão."""
-    print("\n--- Diagnóstico Final ---")
-    print(f"Causa Provável: {reason}")
-    print(f"Sugestão: {suggestion}")
-    print("\nSe o problema persistir, pode ser necessário contatar o suporte técnico do seu provedor de internet ou um técnico especializado.")
+    def show_final_diagnosis(self, diagnosis_index):
+        """Exibe o diagnóstico final na interface."""
+        if diagnosis_index in self.diagnoses:
+            diagnosis_tuple = self.diagnoses[diagnosis_index]
+            self.update_ui(diagnosis_tuple=diagnosis_tuple, show_buttons=False, show_restart=True)
+        else:
+             # Diagnóstico de erro não encontrado
+             error_tuple = ("Erro no fluxo de diagnóstico.", "Ocorreu um erro inesperado. Tente reiniciar.")
+             self.update_ui(diagnosis_tuple=error_tuple, show_buttons=False, show_restart=True)
 
-def diagnose():
-    """Executa o fluxo principal de diagnóstico."""
-    print("Bem-vindo ao assistente de diagnóstico de rede!")
-    print("Vou fazer algumas perguntas para tentar identificar o problema.")
-    print("Por favor, responda com 'sim' ou 'nao'.")
+    def handle_yes(self):
+        """Processa a resposta 'Sim'."""
+        if self.current_step_index in self.steps:
+            _, next_step_if_yes, _, _ = self.steps[self.current_step_index]
+            self.show_step(next_step_if_yes)
+        else:
+            print(f"Erro: Tentativa de 'Sim' em estado inválido {self.current_step_index}")
+            self.show_final_diagnosis(-99) # Erro
 
-    # --- 1. Início (Implícito) ---
+    def handle_no(self):
+        """Processa a resposta 'Não'."""
+        if self.current_step_index in self.steps:
+            _, _, next_step_if_no, _ = self.steps[self.current_step_index]
+            self.show_step(next_step_if_no)
+        else:
+            print(f"Erro: Tentativa de 'Não' em estado inválido {self.current_step_index}")
+            self.show_final_diagnosis(-99) # Erro
 
-    # --- 2. Verificação da Conexão Física ---
-    print("\n--- Verificando Conexões Físicas ---")
-    lights_ok = ask_question("As luzes indicadoras do seu modem e roteador (se separados) parecem normais? (Ex: Luz 'Power' acesa, luz 'Internet'/'WAN' acesa ou piscando, luz 'WLAN'/'Wi-Fi' acesa?)")
+    def start_diagnosis(self):
+        """Inicia ou reinicia o processo de diagnóstico."""
+        print("Iniciando/Reiniciando diagnóstico...")
+        self.show_step(0) # Começa do passo 0
 
-    if lights_ok == "nao":
-        provide_diagnosis(
-            "Problema físico/energia no modem/roteador.",
-            "Verifique as conexões de energia do modem/roteador. Se persistir, tente reiniciá-los (desligar da tomada por 30s e ligar novamente). Se ainda assim as luzes não normalizarem, pode haver um problema com o equipamento ou com o sinal da operadora."
-        )
-        return
-
-    # Assumindo que o usuário verifica o tipo de conexão relevante para ele
-    connection_physical_ok = ask_question("A conexão física entre seu dispositivo e o roteador está correta? (Cabo de rede bem conectado OU conectado à rede Wi-Fi correta com sinal bom?)")
-    if connection_physical_ok == "nao":
-         provide_diagnosis(
-            "Problema na conexão física local (Cabo ou Wi-Fi).",
-            "Se usa cabo, verifique se está bem conectado nas duas pontas. Se usa Wi-Fi, confira se está conectado à rede correta, com a senha certa e se o sinal está bom. Tente reiniciar o dispositivo e o roteador."
-        )
-         return
-
-    print("\nVerificações físicas básicas parecem OK. Prosseguindo...")
-
-    # --- 3. Verificação do Endereço IP / Conexão com Roteador ---
-    print("\n--- Verificando Conexão com o Roteador ---")
-    router_page_accessible = ask_question("Tente acessar a página de configuração do seu roteador. Abra o navegador e digite o endereço padrão (geralmente http://192.168.0.1 ou http://192.168.1.1). Você conseguiu acessar a página do roteador (mesmo que peça senha)?")
-
-    if router_page_accessible == "nao":
-        provide_diagnosis(
-            "Problema na comunicação com o roteador ou na obtenção de endereço IP.",
-            "Parece haver um problema na comunicação inicial com o roteador ou na obtenção de um endereço IP válido. Tente reiniciar seu computador/dispositivo e o roteador. Verifique se as configurações de rede do seu dispositivo estão para obter IP automaticamente (DHCP)."
-        )
-        return
-
-    print("\nConexão com o roteador parece OK. Prosseguindo para teste de internet...")
-
-    # --- 4. Verificação de Gateway e DNS ---
-    print("\n--- Verificando Conectividade Externa e DNS ---")
-    external_ip_accessible = ask_question("Agora, tente acessar um site diretamente pelo endereço IP. Abra o navegador e digite http://1.1.1.1 (servidor DNS da Cloudflare). Você conseguiu carregar alguma página (mesmo que de erro/informação, diferente de 'não encontrado')? ")
-
-    if external_ip_accessible == "nao":
-        provide_diagnosis(
-            "Problema de conectividade geral com a internet.",
-            "Não foi possível acessar um endereço IP externo diretamente. Isso pode indicar um problema no roteador, no modem ou com o seu provedor de internet (ISP). Reinicie o modem e o roteador (desligue da tomada por 30s). Se não resolver, verifique o status do serviço com seu provedor."
-        )
-        return
-
-    # Se chegou aqui, consegue acessar IP externo, testar DNS
-    print("\nConectividade externa (nível IP) parece funcionar. Testando resolução de nomes (DNS)...")
-    common_site_accessible = ask_question("Já que você acessou o IP externo, tente acessar um site comum pelo nome, como http://www.google.com. Você consegue acessar?" )
-
-    if common_site_accessible == "sim":
-        provide_diagnosis(
-            "Conexão parece normal ou problema foi resolvido.",
-            "Parece que a conexão com a internet foi restabelecida e a resolução de nomes (DNS) está funcionando. O problema pode ter sido temporário. Monitore a conexão."
-        )
-        return
-    else:
-        provide_diagnosis(
-            "Problema de DNS (Resolução de Nomes).",
-            "Você consegue acessar a internet por IP, mas não por nomes (como google.com). Isso indica um problema de DNS. Tente reiniciar o roteador. Se não funcionar, você pode tentar configurar manualmente os servidores DNS no seu computador ou roteador para 1.1.1.1 e 1.0.0.1 (Cloudflare) ou 8.8.8.8 e 8.8.4.4 (Google). Consulte o manual do seu sistema operacional ou roteador para saber como fazer isso."
-        )
-        return
-
-# Ponto de entrada do script
+# --- Ponto de Entrada --- 
 if __name__ == "__main__":
-    diagnose()
-
+    root = tk.Tk()
+    app = NetworkDiagnosisApp(root)
+    root.mainloop()
